@@ -24,6 +24,7 @@
     parity: none
     stop_bits: "1"
 
+
 /armor_detector:
   ros__parameters:
     debug: false
