@@ -185,26 +185,30 @@ void RMSerialDriver::receiveData()
           if (packet.reset_tracker) {
             resetTracker();
           }
-
+          //度数转换为弧度
           packet.roll = packet.roll * (M_PI / 180.0);
           packet.pitch = packet.pitch * (M_PI / 180.0);
           packet.yaw = packet.yaw * (M_PI / 180.0);  
 
           geometry_msgs::msg::TransformStamped t;
+          //geometry_msgs是ROS中用于表示几何和变换消息的标准包
           timestamp_offset_ = this->get_parameter("timestamp_offset").as_double();
+          //timestamp_offset_是参数服务器中的一个参数，用于调整时间戳的偏移量。
           t.header.stamp = this->now() + rclcpp::Duration::from_seconds(timestamp_offset_);
           t.header.frame_id = "odom";
           t.child_frame_id = "gimbal_link";
+          //坐标变换，将全局坐标系转换为云台坐标系。（保留意见）
           tf2::Quaternion q;
           q.setRPY(packet.roll, packet.pitch, packet.yaw);
           t.transform.rotation = tf2::toMsg(q);
           tf_broadcaster_->sendTransform(t);
+          //坐标变换完并广播
 
           //  if (packet.detect_color == 1)
           //    team = 0;
           //   else
           //    team = 1;
-
+          //收到瞄准点，则在rviz2中显示瞄准点。
           if (abs(packet.aim_x) > 0.01) {
             aiming_point_.header.stamp = this->now();
             aiming_point_.pose.position.x = packet.aim_x;
@@ -294,6 +298,7 @@ void RMSerialDriver::receiveData()
         // RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 20, "Invalid header: %02X", header[0]);
       }
     } catch (const std::exception & ex) {
+      //捕获异常，重新打开串口。
       RCLCPP_ERROR_THROTTLE(
         get_logger(), *get_clock(), 20, "Error while receiving data: %s", ex.what());
       reopenPort();
@@ -304,6 +309,8 @@ void RMSerialDriver::receiveData()
 void RMSerialDriver::sendData(const auto_aim_interfaces::msg::GimbalCmd::SharedPtr msg)//云台消息包，定义内容在auto_aim_interfaces中定义
 {
   const static std::map<std::string, uint8_t> id_unit8_map{
+    // 定义了一个名为id_unit8_map的静态常量映射，它将字符串键（例如"1"、"2"、"3"等）映射到uint8_t类型的值。
+    //rqt上看到显示数字的地方
     {"", 0},  {"outpost", 0}, {"1", 1}, {"1", 1},     {"2", 2},
     {"3", 3}, {"4", 4},       {"5", 5}, {"guard", 6}, {"base", 7}};
 
@@ -442,6 +449,8 @@ void RMSerialDriver::reopenPort()
     RCLCPP_ERROR(get_logger(), "Error while reopening port: %s", ex.what());
     if (rclcpp::ok()) {
       rclcpp::sleep_for(std::chrono::seconds(1));
+      //rclcpp::sleep_for是一个函数，它接受一个时间间隔作为参数，并导致调用线程在该时间段内暂停执行。
+      //等1秒重开串口
       reopenPort();
     }
   }
